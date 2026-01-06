@@ -210,14 +210,38 @@ def solve_exact(cell_type, horse_cell, cherry_cells, max_walls: int):
     return walls, region, int(max_cherries)
 
 
-def draw_solution(img: Image.Image, lines_x, lines_y, walls: set, out_path: str) -> None:
+def draw_solution(img: Image.Image, lines_x, lines_y, walls: set, out_path: str | None = None) -> Image.Image:
     out = img.convert("RGBA")
     draw = ImageDraw.Draw(out, "RGBA")
     for r, c in walls:
         x0, x1 = lines_x[c], lines_x[c + 1]
         y0, y1 = lines_y[r], lines_y[r + 1]
         draw.rectangle([x0, y0, x1 - 1, y1 - 1], fill=(255, 0, 0, 160))
-    out.save(out_path)
+    if out_path:
+        out.save(out_path)
+    return out
+
+
+def solve_image(img: Image.Image, max_walls: int):
+    arr = np.array(img.convert("RGB"), dtype=np.int16)
+    lines_x, lines_y = detect_grid(arr)
+    cell_type, horse_cell, cherry_cells = classify_cells(arr, lines_x, lines_y)
+
+    if horse_cell is None:
+        raise RuntimeError("Horse not detected. Try adjusting thresholds.")
+
+    walls, region, max_cherries = solve_exact(cell_type, horse_cell, cherry_cells, max_walls)
+    out = draw_solution(img, lines_x, lines_y, walls, None)
+
+    stats = {
+        "grid_rows": len(lines_y) - 1,
+        "grid_cols": len(lines_x) - 1,
+        "horse_cell": horse_cell,
+        "cherries_detected": len(cherry_cells),
+        "cherries_enclosed": max_cherries,
+        "walls_used": len(walls),
+    }
+    return out, stats
 
 
 def main() -> None:
@@ -228,22 +252,14 @@ def main() -> None:
     args = parser.parse_args()
 
     img = Image.open(args.input)
-    arr = np.array(img.convert("RGB"), dtype=np.int16)
+    out, stats = solve_image(img, args.max_walls)
+    out.save(args.output)
 
-    lines_x, lines_y = detect_grid(arr)
-    cell_type, horse_cell, cherry_cells = classify_cells(arr, lines_x, lines_y)
-
-    if horse_cell is None:
-        raise SystemExit("Horse not detected. Try adjusting thresholds.")
-
-    walls, region, max_cherries = solve_exact(cell_type, horse_cell, cherry_cells, args.max_walls)
-    draw_solution(img, lines_x, lines_y, walls, args.output)
-
-    print(f"Grid: {len(lines_y) - 1} rows x {len(lines_x) - 1} cols")
-    print(f"Horse cell: {horse_cell}")
-    print(f"Cherries detected: {len(cherry_cells)}")
-    print(f"Cherries enclosed: {max_cherries}")
-    print(f"Walls used: {len(walls)}")
+    print(f"Grid: {stats['grid_rows']} rows x {stats['grid_cols']} cols")
+    print(f"Horse cell: {stats['horse_cell']}")
+    print(f"Cherries detected: {stats['cherries_detected']}")
+    print(f"Cherries enclosed: {stats['cherries_enclosed']}")
+    print(f"Walls used: {stats['walls_used']}")
 
 
 if __name__ == "__main__":

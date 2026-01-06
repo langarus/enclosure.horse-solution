@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Solution</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Solved</p>
+        <h1>Walls placed, cherries prioritized.</h1>
+        <p class="lede">Here’s your optimized enclosure with max walls {{ max_walls }}.</p>
+      </section>
+
+      <section class="panel">
+        <div class="stats">
+          <div>
+            <span>Grid</span>
+            <strong>{{ stats.grid_rows }} × {{ stats.grid_cols }}</strong>
+          </div>
+          <div>
+            <span>Horse</span>
+            <strong>{{ stats.horse_cell }}</strong>
+          </div>
+          <div>
+            <span>Cherries</span>
+            <strong>{{ stats.cherries_enclosed }} / {{ stats.cherries_detected }}</strong>
+          </div>
+          <div>
+            <span>Walls</span>
+            <strong>{{ stats.walls_used }}</strong>
+          </div>
+        </div>
+
+        <figure class="result">
+          <img alt="Solution" src="data:image/png;base64,{{ image_data }}" />
+        </figure>
+
+        <div class="controls">
+          <a class="ghost" href="/">Solve another</a>
+          <a class="primary" href="data:image/png;base64,{{ image_data }}" download="solution.png">Download</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Enclose Horse Solver</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Exact solver</p>
+        <h1>Enclose the horse with precision.</h1>
+        <p class="lede">Drop any puzzle image and let the optimizer place walls to maximize cherries, then area.</p>
+      </section>
+
+      <section class="panel">
+        {% if error %}
+          <div class="alert">{{ error }}</div>
+        {% endif %}
+        <form class="dropzone" action="/solve" method="post" enctype="multipart/form-data">
+          <div class="loading" aria-live="polite" aria-busy="true">
+            <div class="spinner"></div>
+            <div>
+              <p>Solving…</p>
+              <span>This can take a few seconds for larger grids.</span>
+            </div>
+          </div>
+          <label for="image" class="drop-target">
+            <div>
+              <span class="title">Drop image here</span>
+              <span class="subtitle">or click to upload a PNG</span>
+            </div>
+            <input id="image" name="image" type="file" accept="image/png,image/jpeg" required />
+          </label>
+
+          <div class="controls">
+            <label>
+              Max walls
+              <input type="number" name="max_walls" value="11" min="1" max="99" />
+            </label>
+            <button type="submit">Solve</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      const input = document.getElementById("image");
+      const target = document.querySelector(".drop-target");
+      const form = document.querySelector(".dropzone");
+      const loading = document.querySelector(".loading");
+
+      const setActive = (active) => target.classList.toggle("is-active", active);
+
+      target.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        setActive(true);
+      });
+
+      target.addEventListener("dragleave", () => setActive(false));
+      target.addEventListener("drop", () => setActive(false));
+
+      input.addEventListener("change", () => {
+        const fileName = input.files?.[0]?.name;
+        if (fileName) {
+          target.querySelector(".title").textContent = fileName;
+          target.querySelector(".subtitle").textContent = "Ready to solve";
+        }
+      });
+
+      form.addEventListener("submit", () => {
+        loading.classList.add("is-visible");
+      });
+    </script>
+  </body>
+</html>
