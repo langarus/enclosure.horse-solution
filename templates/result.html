@@ -35,12 +35,12 @@
         </div>
 
         <figure class="result">
-          <img alt="Solution" src="data:image/png;base64,{{ image_data }}" />
+          <img alt="Solution" src="{{ image_url }}" />
         </figure>
 
         <div class="controls">
           <a class="ghost" href="/">Solve another</a>
-          <a class="primary" href="data:image/png;base64,{{ image_data }}" download="solution.png">Download</a>
+          <a class="primary" href="{{ image_url }}" download="solution.png">Download</a>
         </div>
       </section>
     </main>

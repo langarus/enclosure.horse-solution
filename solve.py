@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import argparse
+import hashlib
+import json
+from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -222,7 +225,26 @@ def draw_solution(img: Image.Image, lines_x, lines_y, walls: set, out_path: str 
     return out
 
 
-def solve_image(img: Image.Image, max_walls: int):
+def grid_hash(cell_type, horse_cell, cherry_cells, max_walls: int) -> str:
+    rows, cols = cell_type.shape
+    wall_bits = []
+    cherry_bits = []
+    for r in range(rows):
+        for c in range(cols):
+            wall_bits.append("1" if cell_type[r, c] == "wall" else "0")
+            cherry_bits.append("1" if (r, c) in cherry_cells else "0")
+    parts = [
+        f"{rows}x{cols}",
+        f"h:{horse_cell[0]},{horse_cell[1]}",
+        f"w:{''.join(wall_bits)}",
+        f"c:{''.join(cherry_bits)}",
+        f"m:{max_walls}",
+    ]
+    digest = hashlib.sha256("|".join(parts).encode("ascii")).hexdigest()
+    return digest
+
+
+def solve_image_cached(img: Image.Image, max_walls: int, cache_dir: Path):
     arr = np.array(img.convert("RGB"), dtype=np.int16)
     lines_x, lines_y = detect_grid(arr)
     cell_type, horse_cell, cherry_cells = classify_cells(arr, lines_x, lines_y)
@@ -230,18 +252,34 @@ def solve_image(img: Image.Image, max_walls: int):
     if horse_cell is None:
         raise RuntimeError("Horse not detected. Try adjusting thresholds.")
 
-    walls, region, max_cherries = solve_exact(cell_type, horse_cell, cherry_cells, max_walls)
-    out = draw_solution(img, lines_x, lines_y, walls, None)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    signature = grid_hash(cell_type, horse_cell, cherry_cells, max_walls)
+    out_path = cache_dir / f"{signature}.png"
+    stats_path = cache_dir / f"{signature}.json"
 
     stats = {
         "grid_rows": len(lines_y) - 1,
         "grid_cols": len(lines_x) - 1,
         "horse_cell": horse_cell,
         "cherries_detected": len(cherry_cells),
-        "cherries_enclosed": max_cherries,
-        "walls_used": len(walls),
+        "cherries_enclosed": None,
+        "walls_used": None,
     }
-    return out, stats
+    if out_path.exists() and stats_path.exists():
+        with stats_path.open("r", encoding="utf-8") as handle:
+            cached_stats = json.load(handle)
+        if isinstance(cached_stats.get("horse_cell"), list):
+            cached_stats["horse_cell"] = tuple(cached_stats["horse_cell"])
+        stats.update(cached_stats)
+        return out_path, stats
+
+    walls, region, max_cherries = solve_exact(cell_type, horse_cell, cherry_cells, max_walls)
+    draw_solution(img, lines_x, lines_y, walls, str(out_path))
+    stats["cherries_enclosed"] = max_cherries
+    stats["walls_used"] = len(walls)
+    with stats_path.open("w", encoding="utf-8") as handle:
+        json.dump(stats, handle, ensure_ascii=True)
+    return out_path, stats
 
 
 def main() -> None:
@@ -252,8 +290,10 @@ def main() -> None:
     args = parser.parse_args()
 
     img = Image.open(args.input)
-    out, stats = solve_image(img, args.max_walls)
-    out.save(args.output)
+    out_path, stats = solve_image_cached(img, args.max_walls, Path("."))
+    if out_path != Path(args.output):
+        out = Image.open(out_path)
+        out.save(args.output)
 
     print(f"Grid: {stats['grid_rows']} rows x {stats['grid_cols']} cols")
     print(f"Horse cell: {stats['horse_cell']}")

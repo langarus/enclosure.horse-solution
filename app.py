@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-import base64
-import io
 from pathlib import Path
 
 from flask import Flask, render_template, request
 from PIL import Image
 
-from solve import solve_image
+from solve import solve_image_cached
 
 APP_ROOT = Path(__file__).parent
+CACHE_DIR = APP_ROOT / "static" / "cache"
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
@@ -34,15 +33,12 @@ def solve():
         max_walls = 1
 
     img = Image.open(file.stream)
-    out, stats = solve_image(img, max_walls)
-
-    buffer = io.BytesIO()
-    out.save(buffer, format="PNG")
-    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    out_path, stats = solve_image_cached(img, max_walls, CACHE_DIR)
+    image_url = f"/static/cache/{out_path.name}"
 
     return render_template(
         "result.html",
-        image_data=encoded,
+        image_url=image_url,
         max_walls=max_walls,
         stats=stats,
     )
